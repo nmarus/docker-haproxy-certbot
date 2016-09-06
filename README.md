@@ -98,7 +98,7 @@ frontend http-in
   acl letsencrypt_http_acl path_beg /.well-known/acme-challenge/
   use_backend letsencrypt_http if letsencrypt_http_acl
 
-  redirect scheme https
+  redirect scheme https if !letsencrypt_http_acl
 
   default_backend my_http_backend
 
