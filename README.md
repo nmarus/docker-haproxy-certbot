@@ -75,6 +75,8 @@ Normal http traffic is redirected to https.
 
 ```
 global
+  maxconn 1028
+
   log 127.0.0.1 local0
   log 127.0.0.1 local1 notice
 
@@ -85,29 +87,36 @@ global
   ssl-default-bind-options no-sslv3
 
 defaults
+  option forwardfor
+
   log global
-  mode tcp
+
   timeout connect 5000ms
   timeout client 50000ms
   timeout server 50000ms
+
+  stats enable
+  stats uri /stats
+  stats realm Haproxy\ Statistics
+  stats auth admin:haproxy
 
 frontend http-in
   bind *:80
   mode http
 
+  reqadd X-Forwarded-Proto:\ http
+
   acl letsencrypt_http_acl path_beg /.well-known/acme-challenge/
   use_backend letsencrypt_http if letsencrypt_http_acl
-
   redirect scheme https if !letsencrypt_http_acl
 
   default_backend my_http_backend
 
 frontend https_in
   bind *:443 ssl crt /usr/local/etc/haproxy/default.pem crt /usr/local/etc/haproxy/certs.d ciphers ECDHE-RSA-AES256-SHA:RC4-SHA:RC4:HIGH:!MD5:!aNULL:!EDH:!AESGCM
-  mode tcp
+  mode http
 
-  tcp-request inspect-delay 5s
-  tcp-request content accept if { req.ssl_hello_type 1 }
+  reqadd X-Forwarded-Proto:\ https
 
   default_backend my_http_backend
 
