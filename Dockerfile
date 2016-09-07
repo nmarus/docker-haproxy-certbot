@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y supervisor cron && \
 
 # Setup Supervisor
 RUN mkdir -p /var/log/supervisor
-ADD supervisord.conf /etc/supervisor/conf.d/
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Install Certbot
 RUN echo 'deb http://ftp.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list
@@ -40,10 +40,14 @@ RUN apt-get update && apt-get install -y certbot -t jessie-backports && \
   apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Setup Certbot
-COPY certbot /etc/cron.d/certbot
-COPY refresh.sh /usr/local/etc/haproxy/refresh.sh
-RUN chmod +x /usr/local/etc/haproxy/refresh.sh
 RUN mkdir -p /usr/local/etc/haproxy/certs.d
+RUN mkdir -p /usr/local/etc/letsencrypt
+COPY certbot.cron /etc/cron.d/certbot
+COPY cli.ini /usr/local/etc/letsencrypt/cli.ini
+COPY haproxy-refresh.sh /usr/bin/haproxy-refresh
+COPY certbot-certonly.sh /usr/bin/certbot-certonly
+COPY certbot-renew.sh /usr/bin/certbot-renew
+RUN chmod +x /usr/bin/haproxy-refresh /usr/bin/certbot-certonly /usr/bin/certbot-renew
 
 # Add startup script
 COPY start.sh /start.sh

@@ -1,18 +1,43 @@
 # HAProxy with Certbot
+
 Docker Container with haproxy, certbot, cron, and supervisord configured for
 haproxy SSL termination while providing an automated "Let's Encrypt" cert
 renewal. Once a cert is added, it will automatically be renewed with no
 further interaction.
 
+#### Usage
+
+First some terminology... HAProxy is a reverse proxy load balancer among other
+things. Let's Encrypt is a service that allows the creation and renewal of SSL
+certificates at no cost. Certbot is a Linux CLI tool for interfacing with the
+Let's Encrypt API. Certbot contains it's own http/https server and handles the
+authorization process from Let's Encrypt. This container is setup using HAProxy
+to redirect the Let's Encrypt callbacks to the certbot http server and all other
+requests to the backend server. This configuration of HAProxy is also setup to
+do all the SSL termination so that your backend server(s) do not require a SSL
+configuration or certificates to be installed.
+
+In order to use this in your environment, you must point all your SSL enabled
+domains to the IP Address of this container. This means updating the A Records
+for these domains with your DNS Provider. This includes the website name and all
+alternate names (i.e. example.com and www.example.com) to point to the
+haprox-certbot host. After this is setup, an inbound request for your website is
+initially received by HA Proxy. If the request is part of the Let's Encrypt
+authentication process, it will redirect that traffic to the local instance of
+certbot. Otherwise it  will pass through the request to a backend server (or
+servers) through the use of HAProxy ACLs. The details of HAProxy setup are out
+of the scope for this README, but some examples are included below to get you
+started.
+
 #### Create Container
 
-This will create the haproxy-certbot container
+This will create the haproxy-certbot container. Note that only the inbound ports
+for 80 and 443 are exposed.
 
 ```bash
 docker run -d \
   --restart=always \
   --name haproxy-certbot \
-  --hostname haproxy-certbot \
   -p 80:80 \
   -p 443:443 \
   -v /docker/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg \
@@ -21,6 +46,24 @@ docker run -d \
   nmarus/haproxy-certbot
 ```
 
+It is important to note the mapping of the 3 volumes in the above command. This
+ensures that all non-persistent variable data is not maintained in the container
+itself.
+
+The description of the 3 mapped volumes are as follows:
+
+* `/usr/local/etc/haproxy/haproxy.cfg` - The configuration file for HAProxy
+* `/etc/letsencrypt` - The directory that Let's Encrypt will store it's
+  configuration, certificates and private keys. **It is of significant
+  importance that you maintain a backup of this folder in the event the data is
+  lost or corrupted.**
+* `/usr/local/etc/haproxy/certs.d` - The directory that this container will
+  store the processed certs/keys from Let's Encrypt after they have been
+  converted into a format that HAProxy can use. This is automatically done at
+  each refresh and can also be manually initiated. This volume is not as
+  important as the previous as the certs used by HAProxy can be regenerated
+  again based on the contents of the letsencrypt folder.
+
 #### Add a New Cert
 
 This will add a new cert using a certbot config that is compatible with the
@@ -28,29 +71,32 @@ haproxy config template below. After creating the cert, you should run the
 refresh script referenced below to initialize haproxy to use it. After adding
 the cert and running the refresh script, no further action is needed.
 
+***This example assumes you named you haproxy-certbot container using the same
+name as above when it was created. If not, adjust appropriately.***
+
 ```bash
-docker exec haproxy-certbot certbot certonly \
-  --standalone \
+docker exec haproxy-certbot certbot-certonly \
   --domain example.com \
+  --domain www.example.com \
   --email nmarus@gmail.com \
-  --agree-tos \
-  --http-01-port 8080 \
-  --tls-sni-01-port 8443 \
-  --non-interactive \
-  --standalone-supported-challenges http-01 \
   --dry-run
 ```
 
-*Remove `--dry-run` to generate a live certificate*
+*After testing the setup, remove `--dry-run` to generate a live certificate*
 
 #### Renew a Cert
+Renewing happens automatically but should you choose to renew manually, you can
+do the following.
+
+***This example assumes you named you haproxy-certbot container using the same
+name as above when it was created. If not, adjust appropriately.***
 
 ```bash
-docker exec haproxy-certbot certbot renew \
+docker exec haproxy-certbot certbot-renew \
   --dry-run
 ```
 
-*Remove `--dry-run` to refresh a live certificate*
+*After testing the setup, remove `--dry-run` to refresh a live certificate*
 
 #### Create/Refresh Certs used by haproxy from Let's Encrypt
 
@@ -62,16 +108,33 @@ whenever the cron job runs to refresh the certificates that have been
 registered.
 
 ```bash
-docker exec haproxy-certbot /usr/local/etc/haproxy/refresh.sh
+docker exec haproxy-certbot haproxy-refresh
 ```
+
+***Note: This process will briefly interrupt web traffic to the website behind
+the haproxy. At the moment this happens at every run of the cron job or the
+'haproxy-refresh' command. This eventually will be more intelligent and only
+happen when a certificate is updated.***
 
 ### Example haproxy.cfg
 
 ##### Using Cluster Backend
 
 This example intercepts the Let's Encrypt validation and redirects to certbot.
-Normal traffic is passed to the backend servers.
-Normal http traffic is redirected to https.
+Normal traffic is passed to the backend servers. If the request arrives as a
+http request, it is redirected to https. If there is not a certificate installed
+for the requested website, haproxy will present a self signed default
+certificate. This behavior can be modified by adapting the haproxy config file
+if so desired.
+
+This example also does not do any routing based on the URL. It assumes that all
+domains pointed to this haproxy instance exist on the same backend server(s).
+The backend setup in this example consists of 3 web server that haproxy will
+load balance against. If there is only a single server, or a different quantity
+this can be adjusted in the backend configuration block. This specific example
+would be a configuration that could be used in front of a PaaS cluster such
+as Flynn.io or Tsuru.io (both of which have their own http router in order to
+direct the traffic to the required application).  
 
 ```
 global
