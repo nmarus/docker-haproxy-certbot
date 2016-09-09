@@ -10,5 +10,5 @@ do
  cat ${LE_DIR}/${DOMAIN}/fullchain.pem ${LE_DIR}/${DOMAIN}/privkey.pem > ${HA_PROXY_DIR}/certs.d/${DOMAIN}.pem
 done
 
-# reload haproxy
-/usr/bin/supervisorctl restart haproxy
+# restart haproxy
+exec /usr/bin/haproxy-restart

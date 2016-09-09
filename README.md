@@ -1,35 +1,37 @@
 # HAProxy with Certbot
 
-Docker Container with haproxy, certbot, cron, and supervisord configured for
-haproxy SSL termination while providing an automated "Let's Encrypt" cert
-renewal. Once a cert is added, it will automatically be renewed with no
-further interaction.
+Docker Container with haproxy and certbot. Haproxy is setup to use a 0 downtime
+reload method that queses requests when the Haproxy service is bounced as new
+certificates are  added or existing certificates refreshed.
 
 #### Usage
 
 First some terminology... HAProxy is a reverse proxy load balancer among other
 things. Let's Encrypt is a service that allows the creation and renewal of SSL
-certificates at no cost. Certbot is a Linux CLI tool for interfacing with the
-Let's Encrypt API. Certbot contains it's own http/https server and handles the
-authorization process from Let's Encrypt. This container is setup using HAProxy
-to redirect the Let's Encrypt callbacks to the certbot http server and all other
-requests to the backend server. This configuration of HAProxy is also setup to
-do all the SSL termination so that your backend server(s) do not require a SSL
-configuration or certificates to be installed.
+certificates at no cost through an API and with automatic authentication.
+Certbot is a Linux CLI tool for interfacing with the Let's Encrypt API.
+
+Certbot contains it's own http/https server and handles the authorization process
+from Let's Encrypt. This container is setup using HAProxy
+to redirect the Let's Encrypt callbacks (authentication) to the certbot http
+server while all other requests are directed to the backend server(s).
+This configuration of HAProxy is also setup todo all the SSL termination so that
+your backend server(s) do not require a SSL configuration or certificates to be
+installed.
 
 In order to use this in your environment, you must point all your SSL enabled
 domains to the IP Address of this container. This means updating the A Records
 for these domains with your DNS Provider. This includes the website name and all
-alternate names (i.e. example.com and www.example.com) to point to the
-haprox-certbot host. After this is setup, an inbound request for your website is
-initially received by HA Proxy. If the request is part of the Let's Encrypt
-authentication process, it will redirect that traffic to the local instance of
-certbot. Otherwise it  will pass through the request to a backend server (or
-servers) through the use of HAProxy ACLs. The details of HAProxy setup are out
-of the scope for this README, but some examples are included below to get you
-started.
+alternate names (i.e. example.com and www.example.com). After this is setup,
+an inbound request for your website(s) is initially received by HA Proxy. If the
+request is part of the Let's Encrypt authentication process, it will redirect
+that traffic to the local instance of certbot which is running on internal
+container ports 8080 and 8443. Otherwise it will pass through the request to a
+backend server (or servers) as defined in the haproxy.cfg file. The details of
+HAProxy setup are out of the scope for this README, but some examples are
+included below to get you started.
 
-#### Create Container
+## Setup and Create Container
 
 This will create the haproxy-certbot container. Note that only the inbound ports
 for 80 and 443 are exposed.
@@ -38,6 +40,7 @@ for 80 and 443 are exposed.
 docker run -d \
   --restart=always \
   --name haproxy-certbot \
+  --cap-add=NET_ADMIN
   -p 80:80 \
   -p 443:443 \
   -v /docker/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg \
@@ -64,6 +67,11 @@ The description of the 3 mapped volumes are as follows:
   important as the previous as the certs used by HAProxy can be regenerated
   again based on the contents of the letsencrypt folder.
 
+## Container Helper Scripts
+
+There are a handful of helper scripts to ease the amount of configuration
+parameters needed to administer this container.
+
 #### Add a New Cert
 
 This will add a new cert using a certbot config that is compatible with the
@@ -85,6 +93,7 @@ docker exec haproxy-certbot certbot-certonly \
 *After testing the setup, remove `--dry-run` to generate a live certificate*
 
 #### Renew a Cert
+
 Renewing happens automatically but should you choose to renew manually, you can
 do the following.
 
@@ -98,23 +107,24 @@ docker exec haproxy-certbot certbot-renew \
 
 *After testing the setup, remove `--dry-run` to refresh a live certificate*
 
-#### Create/Refresh Certs used by haproxy from Let's Encrypt
+#### Create/Refresh Certs used by HAProxy from Let's Encrypt
 
 This will parse and individually concatenate all the certs found in
 `/etc/letsencrypt/live` directory into the folder
-`/usr/local/etc/haproxy/certs.d`. This additionally will bounce the haproxy
-service so that the new certs are active. This also will automatically happen
-whenever the cron job runs to refresh the certificates that have been
-registered.
+`/usr/local/etc/haproxy/certs.d`. It additionally will restart the HAProxy
+service so that the new certs are active.
+
+When HAProxy is restarted, the system will queue requests using tc and libnl and
+minimal to 0 interruption of the HAProxy services is expected.
+
+See [this blog entry](https://engineeringblog.yelp.com/2015/04/true-zero-downtime-haproxy-reloads.html) for more details.
+
+**Note: This process automatically happens whenever the cron job runs to refresh
+the certificates that have been registered.**
 
 ```bash
 docker exec haproxy-certbot haproxy-refresh
 ```
-
-***Note: This process will briefly interrupt web traffic to the website behind
-the haproxy. At the moment this happens at every run of the cron job or the
-'haproxy-refresh' command. This eventually will be more intelligent and only
-happen when a certificate is updated.***
 
 ### Example haproxy.cfg
 
@@ -170,8 +180,8 @@ frontend http-in
   reqadd X-Forwarded-Proto:\ http
 
   acl letsencrypt_http_acl path_beg /.well-known/acme-challenge/
-  use_backend letsencrypt_http if letsencrypt_http_acl
   redirect scheme https if !letsencrypt_http_acl
+  use_backend letsencrypt_http if letsencrypt_http_acl
 
   default_backend my_http_backend
 
