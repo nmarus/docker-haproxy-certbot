@@ -43,7 +43,7 @@ docker run -d \
   --cap-add=NET_ADMIN
   -p 80:80 \
   -p 443:443 \
-  -v /docker/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg \
+  -v /docker/haproxy/config:/config \
   -v /docker/haproxy/letsencrypt:/etc/letsencrypt \
   -v /docker/haproxy/certs.d:/usr/local/etc/haproxy/certs.d \
   nmarus/haproxy-certbot
@@ -55,7 +55,7 @@ itself.
 
 The description of the 3 mapped volumes are as follows:
 
-* `/usr/local/etc/haproxy/haproxy.cfg` - The configuration file for HAProxy
+* `/config` - The configuration file location for haproxy.cfg
 * `/etc/letsencrypt` - The directory that Let's Encrypt will store it's
   configuration, certificates and private keys. **It is of significant
   importance that you maintain a backup of this folder in the event the data is
