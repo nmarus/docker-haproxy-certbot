@@ -83,11 +83,15 @@ the cert and running the refresh script, no further action is needed.
 name as above when it was created. If not, adjust appropriately.***
 
 ```bash
+# request certificate from let's encrypt
 docker exec haproxy-certbot certbot-certonly \
   --domain example.com \
   --domain www.example.com \
   --email nmarus@gmail.com \
   --dry-run
+
+# create/update haproxy formatted certs in certs.d and then restart haproxy
+docker exec haproxy-certbot haproxy-refresh
 ```
 
 *After testing the setup, remove `--dry-run` to generate a live certificate*
