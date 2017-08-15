@@ -1,4 +1,4 @@
-# haproxy1.7.8 with certbot fork from https://github.com/nmarus/docker-haproxy-certbot
+# haproxy1.7.8 with certbot 
 FROM debian:jessie-backports
 
 RUN apt-get update \
