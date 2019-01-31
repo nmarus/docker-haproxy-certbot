@@ -40,7 +40,7 @@ for 80 and 443 are exposed.
 docker run -d \
   --restart=always \
   --name haproxy-certbot \
-  --cap-add=NET_ADMIN
+  --cap-add=NET_ADMIN \
   -p 80:80 \
   -p 443:443 \
   -v /docker/haproxy/config:/config \
