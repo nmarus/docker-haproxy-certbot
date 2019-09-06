@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
@@ -20,6 +20,8 @@ if [ ! -e ${CONFIG} ]; then
   exit 1
 fi
 
+cp /config/haproxy.cfg /usr/local/etc/haproxy/
+
 # Check if default.pem has been created
 if [ ! -e ${DEFAULT_PEM} ]; then
   openssl genrsa -des3 -passout pass:${PASSWORD} -out ${KEY} 2048 &> /dev/null
@@ -31,24 +33,5 @@ if [ ! -e ${DEFAULT_PEM} ]; then
   echo ${PASSWORD} > /password.txt
 fi
 
-# Mark Syn Packets
-IP=$(echo `ifconfig eth0 2>/dev/null|awk '/inet addr:/ {print $2}'|sed 's/addr://'`)
-/sbin/iptables -t mangle -I OUTPUT -p tcp -s ${IP} --syn -j MARK --set-mark 1
-
-# Set up the queuing discipline
-tc qdisc add dev lo root handle 1: prio bands 4
-tc qdisc add dev lo parent 1:1 handle 10: pfifo limit 1000
-tc qdisc add dev lo parent 1:2 handle 20: pfifo limit 1000
-tc qdisc add dev lo parent 1:3 handle 30: pfifo limit 1000
-
-# Create a plug qdisc with 32 meg of buffer
-nl-qdisc-add --dev=lo --parent=1:4 --id=40: plug --limit 33554432
-# Release the plug
-nl-qdisc-add --dev=lo --parent=1:4 --id=40: --update plug --release-indefinite
-
-# Set up the filter, any packet marked with "1" will be
-# directed to the plug
-tc filter add dev lo protocol ip parent 1:0 prio 1 handle 1 fw classid 1:4
-
 # Run Supervisor
-exec /usr/bin/supervisord
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

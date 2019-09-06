@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 HA_PROXY_DIR=/usr/local/etc/haproxy
 LE_DIR=/etc/letsencrypt/live
