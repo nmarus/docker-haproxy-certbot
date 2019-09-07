@@ -14,14 +14,6 @@ CSR=${TEMP_DIR}/haproxy.csr
 DEFAULT_PEM=${HA_PROXY_DIR}/default.pem
 CONFIG=/config/haproxy.cfg
 
-# Check if config file for haproxy exists
-if [ ! -e ${CONFIG} ]; then
-  echo "${CONFIG} not found"
-  exit 1
-fi
-
-cp /config/haproxy.cfg /usr/local/etc/haproxy/
-
 # Check if default.pem has been created
 if [ ! -e ${DEFAULT_PEM} ]; then
   openssl genrsa -des3 -passout pass:${PASSWORD} -out ${KEY} 2048 &> /dev/null

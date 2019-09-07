@@ -1,9 +1,6 @@
 # haproxy1.6.9 with certbot
 FROM haproxy:alpine
 
-RUN mkdir -p /config \
-    && mkdir -p /usr/local/etc/haproxy
-
 # Install Supervisor, cron and certbot
 RUN apk --update add --no-cache supervisor dcron certbot openssl bash && \
     rm -rf /tmp/* /var/tmp/*
