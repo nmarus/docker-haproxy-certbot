@@ -12,6 +12,7 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Setup Certbot
 RUN mkdir -p /usr/local/etc/haproxy/certs.d
 RUN mkdir -p /usr/local/etc/letsencrypt
+RUN mkdir -p /config
 COPY certbot.cron /etc/cron.d/certbot
 COPY cli.ini /usr/local/etc/letsencrypt/cli.ini
 COPY cli-manual.ini /usr/local/etc/letsencrypt/cli-manual.ini
