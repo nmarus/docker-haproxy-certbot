@@ -83,8 +83,15 @@ the cert and running the refresh script, no further action is needed.
 name as above when it was created. If not, adjust appropriately.***
 
 ```bash
-# request certificate from let's encrypt
+# request certificate from let's encrypt using http challenge...
 docker exec haproxy-certbot certbot-certonly \
+  --domain example.com \
+  --domain www.example.com \
+  --email nmarus@gmail.com \
+  --dry-run
+
+# .. or request certificate from let's encrypt using dns challenge.
+docker exec haproxy-certbot certbot-certonly-manual \
   --domain example.com \
   --domain www.example.com \
   --email nmarus@gmail.com \
