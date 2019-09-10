@@ -13,14 +13,19 @@ CERT=${TEMP_DIR}/haproxy_cert.pem
 CSR=${TEMP_DIR}/haproxy.csr
 DEFAULT_PEM=${HA_PROXY_DIR}/default.pem
 CONFIG=/config/haproxy.cfg
+TMP_CONFIG=/tmp/haproxy.cfg
 
 # Check if config file for haproxy exists
 if [ ! -e ${CONFIG} ]; then
-  echo "${CONFIG} not found"
-  exit 1
+  if [ ! -e ${TMP_CONFIG} ]; then
+    echo "${CONFIG} not found"
+    exit 1
+  else
+    cp -f ${TMP_CONFIG} ${HA_PROXY_DIR}/
+  fi
+else
+  cp -f ${CONFIG} ${HA_PROXY_DIR}/
 fi
-
-cp -f ${CONFIG} ${HA_PROXY_DIR}/
 
 # Check if default.pem has been created
 if [ ! -e ${DEFAULT_PEM} ]; then
