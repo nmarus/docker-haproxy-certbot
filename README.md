@@ -91,7 +91,7 @@ docker exec haproxy-certbot certbot-certonly \
   --dry-run
 
 # .. or request certificate from let's encrypt using dns challenge.
-docker exec haproxy-certbot certbot-certonly-manual \
+docker exec haproxy-certbot certbot-certonly-dns \
   --domain example.com \
   --domain www.example.com \
   --email nmarus@gmail.com \
