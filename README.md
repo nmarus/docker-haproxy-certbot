@@ -1,8 +1,8 @@
 # HAProxy with Certbot
 
-Docker Container with haproxy and certbot. Haproxy is setup to use a 0 downtime
-reload method that queses requests when the Haproxy service is bounced as new
-certificates are  added or existing certificates refreshed.
+Docker Container with HAProxy and Certbot. HAProxy is setup to use a 0 downtime
+reload method that queues requests when the HAProxy service is bounced as new
+certificates are added or existing certificates refreshed.
 
 #### Usage
 
@@ -75,8 +75,8 @@ parameters needed to administer this container.
 #### Add a New Cert
 
 This will add a new cert using a certbot config that is compatible with the
-haproxy config template below. After creating the cert, you should run the
-refresh script referenced below to initialize haproxy to use it. After adding
+HAProxy config template below. After creating the cert, you should run the
+refresh script referenced below to initialize HAProxy to use it. After adding
 the cert and running the refresh script, no further action is needed.
 
 ***This example assumes you named you haproxy-certbot container using the same
@@ -181,7 +181,7 @@ defaults
 
   stats enable
   stats uri /stats
-  stats realm Haproxy\ Statistics
+  stats realm HAProxy\ Statistics
   stats auth admin:haproxy
 
 frontend http-in
