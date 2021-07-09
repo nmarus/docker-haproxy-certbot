@@ -1,11 +1,11 @@
 # haproxy1.6.9 with certbot
-FROM debian:jessie
+FROM debian:buster
 
-RUN apt-get update && apt-get install -y libssl1.0.0 libpcre3 --no-install-recommends && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libssl1.1 libpcre3 zlib1g-dev --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 # Setup HAProxy
-ENV HAPROXY_MAJOR 1.6
-ENV HAPROXY_VERSION 1.6.9
+ENV HAPROXY_MAJOR 2.4
+ENV HAPROXY_VERSION 2.4.2
 RUN buildDeps='curl gcc libc6-dev libpcre3-dev libssl-dev make' \
   && set -x \
   && apt-get update && apt-get install -y $buildDeps --no-install-recommends && rm -rf /var/lib/apt/lists/* \
@@ -14,7 +14,7 @@ RUN buildDeps='curl gcc libc6-dev libpcre3-dev libssl-dev make' \
   && tar -xzf haproxy.tar.gz -C /usr/src/haproxy --strip-components=1 \
   && rm haproxy.tar.gz \
   && make -C /usr/src/haproxy \
-    TARGET=linux2628 \
+    TARGET=linux-glibc \
     USE_PCRE=1 PCREDIR= \
     USE_OPENSSL=1 \
     USE_ZLIB=1 \
@@ -29,14 +29,16 @@ RUN buildDeps='curl gcc libc6-dev libpcre3-dev libssl-dev make' \
 # Install Supervisor, cron, libnl-utils, net-tools, iptables
 RUN apt-get update && apt-get install -y supervisor cron libnl-utils net-tools iptables && \
   apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+#create softlink beacause libnl is buggy 
+RUN ln -s /usr/lib/x86_64-linux-gnu/libnl-3 /usr/lib/x86_64-linux-gnu/libnl 
 
 # Setup Supervisor
 RUN mkdir -p /var/log/supervisor
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Install Certbot
-RUN echo 'deb http://ftp.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list
-RUN apt-get update && apt-get install -y certbot -t jessie-backports && \
+#RUN echo 'deb http://ftp.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list
+RUN apt-get update && apt-get install -y certbot && \
   apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Setup Certbot
