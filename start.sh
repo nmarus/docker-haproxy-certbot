@@ -32,8 +32,10 @@ if [ ! -e ${DEFAULT_PEM} ]; then
 fi
 
 # Mark Syn Packets
-IP=$(echo `ifconfig eth0 2>/dev/null|awk '/inet addr:/ {print $2}'|sed 's/addr://'`)
+IP=$(ifconfig eth0 2>/dev/null|awk '/inet/ {print $2}')
+
 /sbin/iptables -t mangle -I OUTPUT -p tcp -s ${IP} --syn -j MARK --set-mark 1
+
 
 # Set up the queuing discipline
 tc qdisc add dev lo root handle 1: prio bands 4
@@ -49,6 +51,5 @@ nl-qdisc-add --dev=lo --parent=1:4 --id=40: --update plug --release-indefinite
 # Set up the filter, any packet marked with "1" will be
 # directed to the plug
 tc filter add dev lo protocol ip parent 1:0 prio 1 handle 1 fw classid 1:4
-
 # Run Supervisor
 exec /usr/bin/supervisord
